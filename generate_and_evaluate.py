@@ -115,14 +115,37 @@ rules = generate_simple_rules(100, 4, N)
 facts = generate_rand_facts(100, M)
 print("%d rules generated in %f seconds" % (N, time()-time_start))
 print(facts)
-print(rules)
+
 # load and validate rules
-base_know = []
-for i in rules:
+
 
 # check facts vs rules
 time_start = time()
+itog = []
+for rule in rules:
+	fact_and = rule['if'].get('and')
+	if fact_and is not None:
+		counter = 0
+		for fact in fact_and:
+			if fact in facts:
+				counter += 1
+		if counter == len(fact_and):
+			itog.append(rule['then'])
 
-# YOUR CODE HERE
+	fact_or = rule['if'].get('or')
+	if fact_or is not None:
+		for fact in fact_or:
+			if fact in facts:
+				itog.append(rule['then'])
+				break
 
+	fact_not = rule['if'].get('not')
+	if fact_not is not None:
+		counter = 0
+		for fact in fact_not:
+			if fact in facts:
+				counter += 1
+		if counter == 0:
+			itog.append(rule['then'])
+print(itog)
 print("%d facts validated vs %d rules in %f seconds" % (M, N, time()-time_start))

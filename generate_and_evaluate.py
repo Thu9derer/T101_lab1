@@ -117,6 +117,30 @@ print("%d rules generated in %f seconds" % (N, time()-time_start))
 print(facts)
 
 # load and validate rules
+mass_fact_or = []
+mass_fact_and = []
+mass_fact_not = []
+for rule in rules:
+	rul_and = rule['if'].get('and')
+	if rul_and is not None:
+		if mass_fact_and.index(rul_and) is not None:
+			rules.pop(mass_fact_or.index(rul_and))
+			continue
+		mass_fact_and.append(rul_and)
+
+	rul_not = rule['if'].get('not')
+	if rul_not is not None:
+		if mass_fact_not.index(rul_not) is not None:
+			rules.pop(mass_fact_or.index(rul_and))
+			continue
+		mass_fact_not.append(rul_not)
+
+	rul_or = rule['if'].get('or')
+	if rul_or is not None:
+		if mass_fact_or.index(rul_or) is not None:
+			rules.pop(mass_fact_or.index(rul_or))
+			continue
+		mass_fact_and.append(rul_or)
 
 
 # check facts vs rules

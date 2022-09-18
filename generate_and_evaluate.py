@@ -114,12 +114,18 @@ M = 1000
 rules = generate_simple_rules(100, 4, N)
 facts = generate_rand_facts(100, M)
 print("%d rules generated in %f seconds" % (N, time()-time_start))
-print(facts)
 
 # load and validate rules
 mass_fact_or = []
+mass_then_or = []
+
 mass_fact_and = []
+mass_then_and = []
+
 mass_fact_not = []
+mass_then_not = []
+
+i = 0
 for rule in rules:
 	if rule['then'] in facts:
 		rules.remove(rule)
@@ -127,25 +133,36 @@ for rule in rules:
 	rul_and = rule['if'].get('and')
 	if rul_and is not None:
 		if mass_fact_and.count(rul_and) != 0:
-			rules.pop(mass_fact_and.index(rul_and))
+			rules.pop(i)
 			continue
+		if mass_fact_not.count(rul_and) != 0:
+			index = mass_fact_not.index(rul_and)
+			if rule['then'] == mass_then_not[index]:
+				rules.pop(i)
 		mass_fact_and.append(rul_and)
+		mass_then_and.append(rule['then'])
 
 	rul_not = rule['if'].get('not')
 	if rul_not is not None:
 		if mass_fact_not.count(rul_not) != 0:
-			rules.pop(mass_fact_not.index(rul_not))
+			rules.pop(i)
 			continue
+		if mass_fact_and.count(rul_not) != 0:
+			index = mass_fact_and.index(rul_not)
+			if rule['then'] == mass_then_and[index]:
+				rules.pop(i)
 		mass_fact_not.append(rul_not)
+		mass_then_not.append(rule['then'])
 
 	rul_or = rule['if'].get('or')
 	if rul_or is not None:
 		if mass_fact_or.count(rul_or) != 0:
-			rules.pop(mass_fact_or.index(rul_or))
+			rules.pop(i)
 			continue
-		mass_fact_and.append(rul_or)
-
-
+		mass_fact_or.append(rul_or)
+		mass_then_or.append(rule['then'])
+	i += 1
+print("validate rules in %f seconds" % (time()-time_start))
 # check facts vs rules
 time_start = time()
 itog = []
@@ -174,5 +191,6 @@ for rule in rules:
 				counter += 1
 		if counter == 0:
 			itog.append(rule['then'])
+
 print(itog)
 print("%d facts validated vs %d rules in %f seconds" % (M, N, time()-time_start))

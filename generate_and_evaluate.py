@@ -121,6 +121,9 @@ mass_fact_or = []
 mass_fact_and = []
 mass_fact_not = []
 for rule in rules:
+	if rule['then'] in facts:
+		rules.remove(rule)
+		continue
 	rul_and = rule['if'].get('and')
 	if rul_and is not None:
 		if mass_fact_and.count(rul_and) != 0:
@@ -131,7 +134,6 @@ for rule in rules:
 	rul_not = rule['if'].get('not')
 	if rul_not is not None:
 		if mass_fact_not.count(rul_not) != 0:
-
 			rules.pop(mass_fact_not.index(rul_not))
 			continue
 		mass_fact_not.append(rul_not)

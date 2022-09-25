@@ -117,79 +117,104 @@ print("%d rules generated in %f seconds" % (N, time()-time_start))
 
 # load and validate rules
 # массивы для поиска взаимоислючающих
-mass_fact_and = []  # массив правил из части and
-mass_fact_not = []  # массив правил из части not
+mass_fact_and = [None] * len(rules)  # массив правил из части and
+mass_fact_not = [None] * len(rules)  # массив правил из части not
 
 mass_then = []
 
 itog = []  # итоговая база знаний
 index_not_one_rang = []  # индексы словарей где ранг != 1
 
-ranges = [None] * len(rules)
 facts = set(facts)
-rang = 1
+
 
 for i, rule in enumerate(rules):  # для правил ранга 1
 	counter = 0
-	condition = rule["if"].keys()
+	condition = list(rule["if"].keys())[0]
 	if condition == "or":
 		for ind, fact in enumerate(rule["if"]["or"], start=1):
 			if fact in facts:
 				counter += 1
 			if counter != 0:
 				mass_then.append(rule["then"])
-				ranges[i] = rang
 				itog.append(rule["then"])
-				continue
-			if counter != ind:
-				index_not_one_rang.append(i)
-				continue
+				break
+		if counter == 0:
+			index_not_one_rang.append(i)
+			continue
 
 	if condition == "and":
-		for ind, fact in enumerate(rule["if"]["and"], start=1):
+		fact_and = rule["if"]["and"]
+		if fact_and in mass_fact_not:  # обработка взаимоисключений and not
+			index = mass_fact_not.index(fact_and)
+			if rule["then"] == rules[mass_fact_not[index][-1]]["then"]:
+				rules.pop(i)
+				rules.pop(mass_fact_not[index][-1])
+				mass_then.pop(mass_fact_not[index][-1])
+				continue
+		for ind, fact in enumerate(fact_and, start=1):
 			if fact in facts:
 				counter += 1
 			if counter != ind:
 				index_not_one_rang.append(i)
-				continue
-		if counter == len(rule["if"]["and"]):
+				break
+		if counter == len(fact_and):
+			mass_fact_and.append(fact_and.append(i))
 			mass_then.append(rule["then"])
-			ranges[i] = rule
 			itog.append(rule["then"])
-
+			continue
 	if condition == "not":
+		fact_not = rule["if"]["not"]
+		if fact_not in mass_fact_and:  # обработка взаимоисключений and not
+			index = mass_fact_and.index(fact_not)
+			if rule["then"] == rules[mass_fact_and[index][-1]]["then"]:
+				rules.pop(i)
+				rules.pop(mass_fact_and[index][-1])
+				mass_then.pop(mass_fact_and[index][-1])
+				continue
 		for ind, fact in enumerate(rule["if"]["not"], start=1):
 			if fact in facts:
 				counter += 1
 			if counter != ind:
 				index_not_one_rang.append(i)
-				continue
-		if counter == len(rule["if"]["or"]):
+				break
+		if counter == 0:
 			mass_then.append(rule["then"])
-			ranges[i] = rule
 			itog.append(rule["then"])
-rang += 1
-if len(mass_then) != len(rules):  # для правил ранга больше 1
+
+while len(index_not_one_rang) != 0:  # для правил ранга больше 1
 	for i in index_not_one_rang:
 		rule = rules[i]
-		counter = 0
 		condition = rule["if"].keys()
 		if condition == "or":
+			counter = 0
 			for ind, fact in enumerate(rule["if"]["or"], start=1):
 				if fact in facts:
 					counter += 1
+					mass_then.append(rule["then"])
+					itog.append(rule["then"])
+					index_not_one_rang.remove(i)
+					break
 				elif fact in mass_then:
 					counter += 1
-				if counter != ind:
-					index_not_one_rang.append(i)
-					continue
-			if counter == len(rule["if"]["or"]):
-				mass_then.append(rule["then"])
-				ranges[i] = rang
-				itog.append(rule["then"])
-				index_not_one_rang.remove(i)
+					mass_then.append(rule["then"])
+					itog.append(rule["then"])
+					index_not_one_rang.remove(i)
+					break
+			if counter == 0:
+				index_not_one_rang.append(i)
+				continue
 
 		if condition == "and":
+			counter = 0
+			fact_and = rule["if"]["and"]
+			if fact_and in mass_fact_not:  # обработка взаимоисключений and not
+				index = mass_fact_not.index(fact_and)
+				if rule["then"] == rules[mass_fact_not[index][-1]]["then"]:
+					rules.pop(i)
+					rules.pop(mass_fact_not[index][-1])
+					mass_then.pop(mass_fact_not[index][-1])
+					continue
 			for ind, fact in enumerate(rule["if"]["and"], start=1):
 				if fact in facts:
 					counter += 1
@@ -197,14 +222,22 @@ if len(mass_then) != len(rules):  # для правил ранга больше 
 					counter += 1
 				if counter != ind:
 					index_not_one_rang.append(i)
-					continue
+					break
 			if counter == len(rule["if"]["and"]):
 				mass_then.append(rule["then"])
-				ranges[i] = rule
 				itog.append(rule["then"])
 				index_not_one_rang.remove(i)
 
 		if condition == "not":
+			counter = 0
+			fact_not = rule["if"]["not"]
+			if fact_not in mass_fact_and:  # обработка взаимоисключений and not
+				index = mass_fact_and.index(fact_not)
+				if rule["then"] == rules[mass_fact_and[index][-1]]["then"]:
+					rules.pop(i)
+					rules.pop(mass_fact_and[index][-1])
+					mass_then.pop(mass_fact_and[index][-1])
+					continue
 			for ind, fact in enumerate(rule["if"]["not"], start=1):
 				if fact in facts:
 					counter += 1
@@ -212,45 +245,15 @@ if len(mass_then) != len(rules):  # для правил ранга больше 
 					counter += 1
 				if counter != ind:
 					index_not_one_rang.append(i)
-					continue
+					break
 			if counter == 0:
 				mass_then.append(rule["then"])
-				ranges[i] = rule
 				itog.append(rule["then"])
 				index_not_one_rang.remove(i)
-	rang += 1
+
 print("validate rules in %f seconds" % (time()-time_start))
 # check facts vs rules
 time_start = time()
-
-for rule in rules:
-	fact_and = rule['if'].get('and')
-	if fact_and is not None:
-		counter = 0
-		for fact in fact_and:
-			if fact in facts:
-				counter += 1
-			else:
-				break
-		if counter == len(fact_and):
-			itog.append(rule['then'])
-
-	fact_or = rule['if'].get('or')
-	if fact_or is not None:
-		for fact in fact_or:
-			if fact in facts:
-				itog.append(rule['then'])
-				break
-
-	fact_not = rule['if'].get('not')
-	if fact_not is not None:
-		counter = 0
-		for fact in fact_not:
-			if fact in facts:
-				counter += 1
-				break
-		if counter == 0:
-			itog.append(rule['then'])
 
 print(itog)
 print("%d facts validated vs %d rules in %f seconds" % (M, N, time()-time_start))

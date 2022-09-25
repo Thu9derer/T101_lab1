@@ -109,63 +109,70 @@ print(generate_ring_rules(100, 4, 10, ["or"]))
 
 # generate rules and facts and check time
 time_start = time()
-N = 100000
+N = 10000
 M = 1000
 rules = generate_simple_rules(100, 4, N)
 facts = generate_rand_facts(100, M)
 print("%d rules generated in %f seconds" % (N, time()-time_start))
 
 # load and validate rules
-mass_fact_or = []
-mass_then_or = []
+mass_then = []
+itog = []
+index_not_one_rang = []  # индексы словарей где ранг != 1
+ranges = [None] * len(rules)
+facts = set(facts)
+rang = 1
 
-mass_fact_and = []
-mass_then_and = []
+for i, rule in enumerate(rules):
+	counter = 0
+	condition = rule["if"].keys()
+	if condition == "or":
+		for ind, fact in enumerate(rule["if"]["or"], start=1):
+			if fact in facts:
+				counter += 1
+			elif fact in mass_then:
+				counter += 1
+			if counter != ind:
+				index_not_one_rang.append(i)
+				continue
+		if counter == len(rule["if"]["or"]):
+			mass_then.append(rule["then"])
+			ranges[i] = rang
+			itog.append(rule["then"])
 
-mass_fact_not = []
-mass_then_not = []
+	if condition == "and":
+		for ind, fact in enumerate(rule["if"]["and"], start=1):
+			if fact in facts:
+				counter += 1
+			elif fact in mass_then:
+				counter += 1
+			if counter != ind:
+				index_not_one_rang.append(i)
+				continue
+		if counter == len(rule["if"]["or"]):
+			mass_then.append(rule["then"])
+			ranges[i] = rule
+			itog.append(rule["then"])
 
-i = 0
-for rule in rules:
-	if rule['then'] in facts:
-		rules.remove(rule)
-		continue
-	rul_and = rule['if'].get('and')
-	if rul_and is not None:
-		if mass_fact_and.count(rul_and) != 0:
-			rules.pop(i)
-			continue
-		if mass_fact_not.count(rul_and) != 0:
-			index = mass_fact_not.index(rul_and)
-			if rule['then'] == mass_then_not[index]:
-				rules.pop(i)
-		mass_fact_and.append(rul_and)
-		mass_then_and.append(rule['then'])
+	if condition == "not":
+		for ind, fact in enumerate(rule["if"]["not"], start=1):
+			if fact in facts:
+				counter += 1
+			elif fact in mass_then:
+				counter += 1
+			if counter != ind:
+				index_not_one_rang.append(i)
+				continue
+		if counter == len(rule["if"]["or"]):
+			mass_then.append(rule["then"])
+			ranges[i] = rule
+			itog.append(rule["then"])
+if len(mass_then) != len(rules):
 
-	rul_not = rule['if'].get('not')
-	if rul_not is not None:
-		if mass_fact_not.count(rul_not) != 0:
-			rules.pop(i)
-			continue
-		if mass_fact_and.count(rul_not) != 0:
-			index = mass_fact_and.index(rul_not)
-			if rule['then'] == mass_then_and[index]:
-				rules.pop(i)
-		mass_fact_not.append(rul_not)
-		mass_then_not.append(rule['then'])
-
-	rul_or = rule['if'].get('or')
-	if rul_or is not None:
-		if mass_fact_or.count(rul_or) != 0:
-			rules.pop(i)
-			continue
-		mass_fact_or.append(rul_or)
-		mass_then_or.append(rule['then'])
-	i += 1
 print("validate rules in %f seconds" % (time()-time_start))
 # check facts vs rules
 time_start = time()
-itog = []
+
 for rule in rules:
 	fact_and = rule['if'].get('and')
 	if fact_and is not None:
@@ -173,6 +180,8 @@ for rule in rules:
 		for fact in fact_and:
 			if fact in facts:
 				counter += 1
+			else:
+				break
 		if counter == len(fact_and):
 			itog.append(rule['then'])
 
@@ -189,6 +198,7 @@ for rule in rules:
 		for fact in fact_not:
 			if fact in facts:
 				counter += 1
+				break
 		if counter == 0:
 			itog.append(rule['then'])
 

@@ -116,40 +116,43 @@ facts = generate_rand_facts(100, M)
 print("%d rules generated in %f seconds" % (N, time()-time_start))
 
 # load and validate rules
+# массивы для поиска взаимоислючающих
+mass_fact_and = []  # массив правил из части and
+mass_fact_not = []  # массив правил из части not
+
 mass_then = []
-itog = []
+
+itog = []  # итоговая база знаний
 index_not_one_rang = []  # индексы словарей где ранг != 1
+
 ranges = [None] * len(rules)
 facts = set(facts)
 rang = 1
 
-for i, rule in enumerate(rules):
+for i, rule in enumerate(rules):  # для правил ранга 1
 	counter = 0
 	condition = rule["if"].keys()
 	if condition == "or":
 		for ind, fact in enumerate(rule["if"]["or"], start=1):
 			if fact in facts:
 				counter += 1
-			elif fact in mass_then:
-				counter += 1
+			if counter != 0:
+				mass_then.append(rule["then"])
+				ranges[i] = rang
+				itog.append(rule["then"])
+				continue
 			if counter != ind:
 				index_not_one_rang.append(i)
 				continue
-		if counter == len(rule["if"]["or"]):
-			mass_then.append(rule["then"])
-			ranges[i] = rang
-			itog.append(rule["then"])
 
 	if condition == "and":
 		for ind, fact in enumerate(rule["if"]["and"], start=1):
 			if fact in facts:
 				counter += 1
-			elif fact in mass_then:
-				counter += 1
 			if counter != ind:
 				index_not_one_rang.append(i)
 				continue
-		if counter == len(rule["if"]["or"]):
+		if counter == len(rule["if"]["and"]):
 			mass_then.append(rule["then"])
 			ranges[i] = rule
 			itog.append(rule["then"])
@@ -158,8 +161,6 @@ for i, rule in enumerate(rules):
 		for ind, fact in enumerate(rule["if"]["not"], start=1):
 			if fact in facts:
 				counter += 1
-			elif fact in mass_then:
-				counter += 1
 			if counter != ind:
 				index_not_one_rang.append(i)
 				continue
@@ -167,8 +168,57 @@ for i, rule in enumerate(rules):
 			mass_then.append(rule["then"])
 			ranges[i] = rule
 			itog.append(rule["then"])
-if len(mass_then) != len(rules):
+rang += 1
+if len(mass_then) != len(rules):  # для правил ранга больше 1
+	for i in index_not_one_rang:
+		rule = rules[i]
+		counter = 0
+		condition = rule["if"].keys()
+		if condition == "or":
+			for ind, fact in enumerate(rule["if"]["or"], start=1):
+				if fact in facts:
+					counter += 1
+				elif fact in mass_then:
+					counter += 1
+				if counter != ind:
+					index_not_one_rang.append(i)
+					continue
+			if counter == len(rule["if"]["or"]):
+				mass_then.append(rule["then"])
+				ranges[i] = rang
+				itog.append(rule["then"])
+				index_not_one_rang.remove(i)
 
+		if condition == "and":
+			for ind, fact in enumerate(rule["if"]["and"], start=1):
+				if fact in facts:
+					counter += 1
+				elif fact in mass_then:
+					counter += 1
+				if counter != ind:
+					index_not_one_rang.append(i)
+					continue
+			if counter == len(rule["if"]["and"]):
+				mass_then.append(rule["then"])
+				ranges[i] = rule
+				itog.append(rule["then"])
+				index_not_one_rang.remove(i)
+
+		if condition == "not":
+			for ind, fact in enumerate(rule["if"]["not"], start=1):
+				if fact in facts:
+					counter += 1
+				elif fact in mass_then:
+					counter += 1
+				if counter != ind:
+					index_not_one_rang.append(i)
+					continue
+			if counter == 0:
+				mass_then.append(rule["then"])
+				ranges[i] = rule
+				itog.append(rule["then"])
+				index_not_one_rang.remove(i)
+	rang += 1
 print("validate rules in %f seconds" % (time()-time_start))
 # check facts vs rules
 time_start = time()
